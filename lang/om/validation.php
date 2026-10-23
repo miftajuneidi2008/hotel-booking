@@ -1,0 +1,50 @@
+<?php
+
+// Afaan Oromoo validation messages. Rules that are not listed here fall back to English.
+return [
+    'required' => ':attribute barbaachisaadha.',
+    'email' => ":attribute teessoo imeelii sirrii ta'uu qaba.",
+    'date' => ":attribute guyyaa sirrii ta'uu qaba.",
+    'after' => ":attribute guyyaa :date booda ta'uu qaba.",
+    'after_or_equal' => ":attribute guyyaa :date booda yookaan isa wajjin walqixa ta'uu qaba.",
+    'integer' => ":attribute lakkoofsa guutuu ta'uu qaba.",
+    'numeric' => ":attribute lakkoofsa ta'uu qaba.",
+    'string' => ":attribute barreeffama ta'uu qaba.",
+    'regex' => 'Bifti :attribute sirrii miti.',
+    'exists' => ':attribute filatame sirrii miti.',
+    'unique' => ':attribute duraanuu fudhatameera.',
+    'confirmed' => 'Mirkaneessi :attribute wal hin simu.',
+    'in' => ':attribute filatame sirrii miti.',
+    'current_password' => 'Jechi icciitii sirrii miti.',
+    'min' => [
+        'numeric' => ":attribute xiqqaatu :min ta'uu qaba.",
+        'string' => ":attribute xiqqaatu qubee :min ta'uu qaba.",
+    ],
+    'max' => [
+        'numeric' => ':attribute :max caalu hin qabu.',
+        'string' => ':attribute qubee :max caalu hin qabu.',
+    ],
+    'password' => [
+        'letters' => ':attribute qubee tokko yyuu qabaachuu qaba.',
+        'mixed' => ':attribute qubee guddaa fi xiqqaa tokko tokko qabaachuu qaba.',
+        'numbers' => ':attribute lakkoofsa tokko yyuu qabaachuu qaba.',
+        'symbols' => ':attribute mallattoo tokko yyuu qabaachuu qaba.',
+        'uncompromised' => ":attribute kenname saaxilamuu isaa agarsiisa. Maaloo :attribute adda ta'e filadhaa.",
+    ],
+    'attributes' => [
+        'checkin' => 'guyyaa seenu',
+        'checkout' => "guyyaa ba'u",
+        'guests' => "baay'ina keessummootaa",
+        'guest_name' => 'maqaa guutuu',
+        'guest_phone' => 'bilbila',
+        'guest_email' => 'imeelii',
+        'notes' => 'yaada',
+        'reason' => 'sababa',
+        'name' => 'maqaa',
+        'email' => 'imeelii',
+        'password' => 'jecha icciitii',
+        'password_confirmation' => 'mirkaneessa jecha icciitii',
+        'current_password' => 'jecha icciitii ammaa',
+        'type' => 'gosa kutaa',
+    ],
+];

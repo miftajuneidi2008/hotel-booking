@@ -1,0 +1,50 @@
+<?php
+
+// Amharic validation messages. Rules that are not listed here fall back to English.
+return [
+    'required' => ':attribute ያስፈልጋል።',
+    'email' => ':attribute ትክክለኛ የኢሜይል አድራሻ መሆን አለበት።',
+    'date' => ':attribute ትክክለኛ ቀን መሆን አለበት።',
+    'after' => ':attribute ከ:date በኋላ መሆን አለበት።',
+    'after_or_equal' => ':attribute ከ:date በኋላ ወይም ከእሱ ጋር እኩል መሆን አለበት።',
+    'integer' => ':attribute ሙሉ ቁጥር መሆን አለበት።',
+    'numeric' => ':attribute ቁጥር መሆን አለበት።',
+    'string' => ':attribute ጽሑፍ መሆን አለበት።',
+    'regex' => 'የ:attribute ቅርጸት ትክክል አይደለም።',
+    'exists' => 'የተመረጠው :attribute ትክክል አይደለም።',
+    'unique' => ':attribute አስቀድሞ ተወስዷል።',
+    'confirmed' => 'የ:attribute ማረጋገጫ አይመሳሰልም።',
+    'in' => 'የተመረጠው :attribute ትክክል አይደለም።',
+    'current_password' => 'የይለፍ ቃሉ ትክክል አይደለም።',
+    'min' => [
+        'numeric' => ':attribute ቢያንስ :min መሆን አለበት።',
+        'string' => ':attribute ቢያንስ :min ቁምፊዎች መሆን አለበት።',
+    ],
+    'max' => [
+        'numeric' => ':attribute ከ:max መብለጥ የለበትም።',
+        'string' => ':attribute ከ:max ቁምፊዎች መብለጥ የለበትም።',
+    ],
+    'password' => [
+        'letters' => ':attribute ቢያንስ አንድ ፊደል መያዝ አለበት።',
+        'mixed' => ':attribute ቢያንስ አንድ አቢይ እና አንድ ትንሽ ፊደል መያዝ አለበት።',
+        'numbers' => ':attribute ቢያንስ አንድ ቁጥር መያዝ አለበት።',
+        'symbols' => ':attribute ቢያንስ አንድ ምልክት መያዝ አለበት።',
+        'uncompromised' => 'የተሰጠው :attribute በመረጃ ጥሰት ውስጥ ታይቷል። እባክዎ ሌላ :attribute ይምረጡ።',
+    ],
+    'attributes' => [
+        'checkin' => 'የመግቢያ ቀን',
+        'checkout' => 'የመውጫ ቀን',
+        'guests' => 'የእንግዶች ብዛት',
+        'guest_name' => 'ሙሉ ስም',
+        'guest_phone' => 'ስልክ',
+        'guest_email' => 'ኢሜይል',
+        'notes' => 'ማስታወሻ',
+        'reason' => 'ምክንያት',
+        'name' => 'ስም',
+        'email' => 'ኢሜይል',
+        'password' => 'የይለፍ ቃል',
+        'password_confirmation' => 'የይለፍ ቃል ማረጋገጫ',
+        'current_password' => 'አሁን ያለው የይለፍ ቃል',
+        'type' => 'የክፍል አይነት',
+    ],
+];
