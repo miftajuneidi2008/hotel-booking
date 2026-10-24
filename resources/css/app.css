@@ -13,6 +13,11 @@
     --color-muted: #6a6a6a;
 }
 
+/* Alpine: hide elements (chart tooltips) until Alpine has started */
+[x-cloak] {
+    display: none !important;
+}
+
 /* Hero entrance: staggered with style="--i: n" */
 @keyframes rise {
     from {

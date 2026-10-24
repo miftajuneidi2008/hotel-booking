@@ -1,0 +1,39 @@
+:count room needs cleaning|:count rooms need cleaning
+:n of :total bookings
+:n pts vs previous :days days
+:n% vs previous :days days
+Action needed
+Arriving
+Check-in
+Check-out
+Down
+Good afternoon
+Good evening
+Good morning
+Housekeeping status of every room
+Leaving
+No bookings were made in this period.
+No guests stayed in this period.
+No one checked in during this period.
+No one is due to leave.
+No one is waiting to check in.
+No stays were checked out in this period.
+No upcoming stays
+Nothing recorded in this period yet.
+Nothing to pay
+Open room board
+Overdue since :date
+Owes
+People who arrived each day
+Pick your dates and we will show the rooms that are free.
+Room not ready
+Same as previous :days days
+See all
+See all my bookings
+Up
+View booking
+Where bookings come from
+Your current stay
+Your next stay
+bookings
+vs none in the previous :days days
