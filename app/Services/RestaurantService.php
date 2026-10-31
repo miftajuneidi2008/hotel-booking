@@ -106,13 +106,13 @@ class RestaurantService
     }
 
     /**
-     * Take payment for the whole bill and close it. Bank transfer, Telebirr and card need a reference number (FR-20).
+     * Take payment for the whole bill and close it. Optionally adds VAT on top of the items. Bank transfer, Telebirr and card need a reference number (FR-20).
      *
      * @throws BookingException
      */
-    public function pay(WalkInBill $bill, PaymentMethod $method, ?string $reference, User $by): WalkInBill
+    public function pay(WalkInBill $bill, PaymentMethod $method, ?string $reference, User $by, bool $applyVat = false): WalkInBill
     {
-        return DB::transaction(function () use ($bill, $method, $reference, $by): WalkInBill {
+        return DB::transaction(function () use ($bill, $method, $reference, $by, $applyVat): WalkInBill {
             $fresh = $this->lockOpen($bill->id);
             $reference = trim((string) $reference);
 
@@ -124,7 +124,17 @@ class RestaurantService
                 throw new BookingException('Enter the reference number for a '.strtolower($method->label()).' payment.');
             }
 
+            // VAT is added on top of the items when the cashier ticks "Apply VAT" (only if VAT is switched on in the tax settings).
+            $vatRate = (bool) config('tax.vat.enabled') ? max(0.0, (float) config('tax.vat.rate')) : 0.0;
+            $applyVat = $applyVat && $vatRate > 0;
+            $subtotal = (float) $fresh->total;
+            $vat = $applyVat ? round($subtotal * $vatRate / 100, 2) : 0.0;
+
             $fresh->update([
+                'total' => round($subtotal + $vat, 2),
+                'vat_applied' => $applyVat,
+                'vat_rate' => $applyVat ? $vatRate : 0,
+                'vat_amount' => $vat,
                 'status' => WalkInStatus::Paid,
                 'payment_method' => $method,
                 'payment_reference' => $reference !== '' ? $reference : null,

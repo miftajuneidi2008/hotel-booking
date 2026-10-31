@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 /** A bill for a restaurant or bar customer who is not staying in the hotel (FR-28). */
 #[Fillable([
     'number', 'customer_name', 'status', 'total',
+    'vat_applied', 'vat_rate', 'vat_amount',
     'payment_method', 'payment_reference', 'paid_at', 'paid_by',
     'booking_id', 'transferred_at', 'transferred_by',
     'voided_at', 'voided_by', 'void_reason', 'created_by',
@@ -46,6 +47,9 @@ class WalkInBill extends Model
         return [
             'status' => WalkInStatus::class,
             'total' => 'decimal:2',
+            'vat_applied' => 'boolean',
+            'vat_rate' => 'decimal:2',
+            'vat_amount' => 'decimal:2',
             'payment_method' => PaymentMethod::class,
             'paid_at' => 'datetime',
             'transferred_at' => 'datetime',

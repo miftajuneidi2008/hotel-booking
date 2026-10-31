@@ -21,6 +21,7 @@ class PayWalkInBillRequest extends FormRequest
         return [
             'method' => ['required', Rule::enum(PaymentMethod::class)],
             'reference' => ['nullable', 'string', 'max:100'],
+            'apply_vat' => ['nullable', 'boolean'],
         ];
     }
 }

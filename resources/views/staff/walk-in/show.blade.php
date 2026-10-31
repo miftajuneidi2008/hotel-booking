@@ -2,6 +2,8 @@
     use App\Enums\WalkInStatus;
 
     $open = $bill->isOpen();
+    $vatAvailable = (bool) config('tax.vat.enabled') && (float) config('tax.vat.rate') > 0;
+    $vatRate = $vatAvailable ? (float) config('tax.vat.rate') : 0;
 @endphp
 
 <x-app-layout>
@@ -59,6 +61,14 @@
                     @endforelse
                 </ul>
 
+                @if ($bill->vat_applied)
+                    <div class="flex items-center justify-between border-t border-gray-200 px-5 py-2 text-sm text-gray-600">
+                        <span>{{ __('Subtotal') }}</span><span>ETB {{ number_format($bill->total - $bill->vat_amount, 2) }}</span>
+                    </div>
+                    <div class="flex items-center justify-between px-5 py-2 text-sm text-gray-600">
+                        <span>{{ __('VAT') }} ({{ rtrim(rtrim(number_format($bill->vat_rate, 2), '0'), '.') }}%)</span><span>ETB {{ number_format($bill->vat_amount, 2) }}</span>
+                    </div>
+                @endif
                 <div class="flex items-center justify-between border-t border-gray-200 bg-gray-50 px-5 py-4 text-base font-semibold text-gray-900">
                     <span>{{ __('Total') }}</span><span>ETB {{ number_format($bill->total, 2) }}</span>
                 </div>
@@ -100,9 +110,23 @@
 
                 {{-- Pay --}}
                 @if ($bill->lines->isNotEmpty())
-                    <form method="POST" action="{{ route('staff.walk-in-bills.pay', $bill) }}" x-data="{ method: @js(old('method', 'cash')) }" class="mx-4 space-y-4 rounded-2xl bg-white p-5 shadow-sm sm:mx-0">
+                    <form method="POST" action="{{ route('staff.walk-in-bills.pay', $bill) }}" x-data="{ method: @js(old('method', 'cash')), applyVat: @js((bool) old('apply_vat', $vatAvailable)), base: {{ (float) $bill->total }}, rate: {{ $vatRate }}, get vat() { return this.applyVat ? Math.round(this.base * this.rate) / 100 : 0 }, get due() { return (this.base + this.vat).toFixed(2) } }" class="mx-4 space-y-4 rounded-2xl bg-white p-5 shadow-sm sm:mx-0">
                         @csrf
-                        <h3 class="font-semibold text-gray-900">{{ __('Take payment') }} &middot; ETB {{ number_format($bill->total, 2) }}</h3>
+                        <h3 class="font-semibold text-gray-900">{{ __('Take payment') }} &middot; ETB <span x-text="Number(due).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })">{{ number_format($bill->total, 2) }}</span></h3>
+
+                        @if ($vatAvailable)
+                            <div class="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                                <input type="hidden" name="apply_vat" value="0">
+                                <label class="flex cursor-pointer items-center gap-2 text-sm font-medium text-gray-800">
+                                    <input type="checkbox" name="apply_vat" value="1" x-model="applyVat" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500">
+                                    {{ __('Apply VAT') }} ({{ rtrim(rtrim(number_format($vatRate, 2), '0'), '.') }}%)
+                                </label>
+                                <p class="mt-1 text-xs text-gray-500" x-show="applyVat" x-cloak>
+                                    {{ __('VAT') }}: ETB <span x-text="vat.toFixed(2)"></span> {{ __('is added to the total.') }}
+                                </p>
+                                <p class="mt-1 text-xs text-gray-500" x-show="!applyVat" x-cloak>{{ __('VAT is not applied to this bill.') }}</p>
+                            </div>
+                        @endif
 
                         <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
                             @foreach ($methods as $method)

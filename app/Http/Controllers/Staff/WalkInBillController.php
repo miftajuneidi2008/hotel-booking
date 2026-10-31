@@ -78,7 +78,7 @@ class WalkInBillController extends Controller
     public function pay(PayWalkInBillRequest $request, WalkInBill $bill): RedirectResponse
     {
         try {
-            $this->restaurant->pay($bill, PaymentMethod::from($request->validated('method')), $request->validated('reference'), $request->user());
+            $this->restaurant->pay($bill, PaymentMethod::from($request->validated('method')), $request->validated('reference'), $request->user(), $request->boolean('apply_vat'));
         } catch (BookingException $e) {
             return redirect()->route('staff.walk-in-bills.show', $bill)->withInput()->with('error', $e->getMessage());
         }

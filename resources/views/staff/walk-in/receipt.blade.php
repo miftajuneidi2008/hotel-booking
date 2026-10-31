@@ -53,6 +53,10 @@
         @endforeach
 
         <div class="line"></div>
+        @if ($bill->vat_applied)
+            <div class="row"><span>{{ __('Subtotal') }}</span><span>{{ number_format($bill->total - $bill->vat_amount, 2) }}</span></div>
+            <div class="row"><span>{{ __('VAT') }} ({{ rtrim(rtrim(number_format($bill->vat_rate, 2), '0'), '.') }}%)</span><span>{{ number_format($bill->vat_amount, 2) }}</span></div>
+        @endif
         <div class="row b"><span>{{ __('TOTAL (ETB)') }}</span><span>{{ number_format($bill->total, 2) }}</span></div>
 
         @if ($bill->status === \App\Enums\WalkInStatus::Paid)
