@@ -26,7 +26,10 @@ use Illuminate\Support\Facades\DB;
  */
 class RestaurantService
 {
-    public function __construct(private readonly FolioService $folio) {}
+    public function __construct(
+        private readonly FolioService $folio,
+        private readonly TableOccupancyService $tables,
+    ) {}
 
     // ------------------------------------------------------------------
     // Room bill
@@ -35,18 +38,28 @@ class RestaurantService
     /**
      * Charge menu items to a guest's room bill. All or nothing: if one line fails, none is added.
      *
+     * A table number is optional here. When one is given, the table must not have another order at the same time.
+     *
      * @param  list<array{menu_item_id: int|string, quantity: int|string}>  $lines
      * @return Collection<int, FolioCharge>
      *
      * @throws BookingException
      */
-    public function orderToRoom(Booking $booking, array $lines, User $by): Collection
+    public function orderToRoom(Booking $booking, array $lines, User $by, ?string $table = null): Collection
     {
-        return DB::transaction(function () use ($booking, $lines, $by): Collection {
-            return collect($this->resolve($lines))->map(
+        $table = $this->tables->normalize($table);
+
+        return $this->tables->guard($table, fn (): Collection => DB::transaction(function () use ($booking, $lines, $by, $table): Collection {
+            $resolved = $this->resolve($lines);
+
+            if ($table !== null) {
+                $this->tables->claimForRoom($booking, $table, $by);
+            }
+
+            return collect($resolved)->map(
                 fn (array $line): FolioCharge => $this->folio->addCharge($booking, $this->chargeData($line['item'], $line['quantity']), $by),
             );
-        });
+        }));
     }
 
     // ------------------------------------------------------------------
@@ -54,21 +67,29 @@ class RestaurantService
     // ------------------------------------------------------------------
 
     /**
-     * Add items to a walk-in bill, opening a new bill when none is given.
+     * Add items to a walk-in bill, opening a new bill when none is given. A new bill can have a table number; the
+     * table must not have another order at the same time. An existing bill keeps the table it already has.
      *
      * @param  list<array{menu_item_id: int|string, quantity: int|string}>  $lines
      *
      * @throws BookingException
      */
-    public function addToWalkIn(?WalkInBill $bill, ?string $customer, array $lines, User $by): WalkInBill
+    public function addToWalkIn(?WalkInBill $bill, ?string $customer, array $lines, User $by, ?string $table = null): WalkInBill
     {
-        return DB::transaction(function () use ($bill, $customer, $lines, $by): WalkInBill {
+        $table = $bill === null ? $this->tables->normalize($table) : $bill->table_number;
+
+        return $this->tables->guard($table, fn (): WalkInBill => DB::transaction(function () use ($bill, $customer, $lines, $by, $table): WalkInBill {
             $resolved = $this->resolve($lines);
 
             if ($bill === null) {
+                if ($table !== null) {
+                    $this->tables->assertFree($table);
+                }
+
                 $name = trim((string) $customer);
                 $bill = WalkInBill::create([
                     'customer_name' => $name !== '' ? $name : null,
+                    'table_number' => $table,
                     'status' => WalkInStatus::Open,
                     'total' => 0,
                     'created_by' => $by->id,
@@ -90,7 +111,7 @@ class RestaurantService
             }
 
             return $this->recalculate($bill);
-        });
+        }));
     }
 
     /** @throws BookingException */

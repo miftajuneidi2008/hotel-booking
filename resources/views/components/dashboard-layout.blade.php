@@ -51,7 +51,7 @@
             'title' => 'Restaurant',
             'items' => [
                 ['label' => 'Take order', 'route' => 'staff.orders.create', 'active' => 'staff.orders.*', 'icon' => 'order', 'show' => $user->can('viewAny', \App\Models\MenuItem::class)],
-                ['label' => 'Walk-in bills', 'route' => 'staff.walk-in-bills.index', 'active' => 'staff.walk-in-bills.*', 'icon' => 'receipt', 'show' => $user->can('viewAny', \App\Models\WalkInBill::class)],
+                ['label' => 'Walk-in bills', 'route' => 'staff.walk-in-bills.index', 'active' => 'staff.walk-in-bills.*', 'icon' => 'receipt', 'show' => $user->can('viewAny', \App\Models\WalkInBill::class) && $user->canOrderForWalkIn()],
                 ['label' => 'Menu', 'route' => 'staff.menu.index', 'active' => 'staff.menu.*', 'icon' => 'menu', 'show' => $user->can('viewAny', \App\Models\MenuItem::class)],
             ],
         ],
@@ -185,5 +185,8 @@
                 </main>
             </div>
         </div>
+
+        <x-error-modal />
+        <x-confirm-modal />
     </body>
 </html>

@@ -65,4 +65,9 @@ class User extends Authenticatable
     {
         return $this->role->canManageBookings();
     }
+
+    public function canOrderForWalkIn(): bool
+    {
+        return $this->role->canOrderForWalkIn();
+    }
 }

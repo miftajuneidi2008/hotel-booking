@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /** A bill for a restaurant or bar customer who is not staying in the hotel (FR-28). */
 #[Fillable([
-    'number', 'customer_name', 'status', 'total',
+    'number', 'customer_name', 'table_number', 'status', 'total',
     'vat_applied', 'vat_rate', 'vat_amount',
     'payment_method', 'payment_reference', 'paid_at', 'paid_by',
     'booking_id', 'transferred_at', 'transferred_by',

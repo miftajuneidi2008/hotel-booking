@@ -22,7 +22,9 @@
              cat: 'all',
              search: '',
              cart: @js((object) $oldCart),
-             target: @js(old('target', $startTarget)),
+             target: @js($canWalkIn ? old('target', $startTarget) : 'room'),
+             requireTable: @js($requireTable),
+             table: @js(old('table_number', '')),
              booking: @js((string) old('booking_id', $startBooking ?? '')),
              bill: @js((string) old('walk_in_bill_id', $startBill ?? '')),
              customer: @js(old('customer_name', '')),
@@ -38,7 +40,7 @@
              },
              get total() { return this.lines.reduce((sum, l) => sum + l.amount, 0); },
              get count() { return this.lines.reduce((sum, l) => sum + l.qty, 0); },
-             get ready() { return this.count > 0 && (this.target === 'walk_in' || this.booking !== ''); },
+             get ready() { return this.count > 0 && (this.target === 'walk_in' || this.booking !== '') && ! (this.requireTable && this.target === 'room' && this.table.trim() === ''); },
              add(id) { this.cart[id] = Math.min(99, (this.cart[id] || 0) + 1); },
              less(id) { if ((this.cart[id] || 0) <= 1) { delete this.cart[id]; } else { this.cart[id]--; } },
              qty(id) { return this.cart[id] || 0; },
@@ -46,6 +48,8 @@
          }">
         <div class="max-w-6xl mx-auto sm:px-6 lg:px-8 space-y-6">
             @include('staff.menu._tabs', ['active' => 'order'])
+
+            <x-auth-session-status :status="session('status')" class="mx-4 sm:mx-0" />
 
             @session('error')
                 <p role="alert" class="mx-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700 sm:mx-0">{{ $value }}</p>
@@ -71,6 +75,26 @@
                     </p>
                 </div>
             @else
+                @if ($occupiedTables->isNotEmpty())
+                    <section class="mx-4 rounded-2xl bg-white p-4 shadow-sm sm:mx-0" aria-label="{{ __('Tables in use') }}">
+                        <h3 class="text-sm font-semibold text-gray-900">{{ __('Tables in use') }}</h3>
+                        <ul class="mt-3 flex flex-wrap gap-2">
+                            @foreach ($occupiedTables as $occupied)
+                                <li class="flex items-center gap-2 rounded-full bg-amber-50 py-1.5 pl-3 pr-2 text-sm text-amber-900 ring-1 ring-amber-200">
+                                    <span><span class="font-semibold">{{ __('Table') }} {{ $occupied['table'] }}</span> &middot; {{ $occupied['who'] }}</span>
+                                    @if ($occupied['hold_id'])
+                                        <form method="POST" action="{{ route('staff.table-holds.release', $occupied['hold_id']) }}">
+                                            @csrf
+                                            <button type="submit" class="rounded-full bg-white px-2.5 py-0.5 text-xs font-medium text-amber-800 ring-1 ring-amber-300 hover:bg-amber-100">{{ __('Free') }}</button>
+                                        </form>
+                                    @endif
+                                </li>
+                            @endforeach
+                        </ul>
+                        <p class="mt-2 text-xs text-gray-500">{{ __('A table can only have one order at a time.') }}</p>
+                    </section>
+                @endif
+
                 <div class="grid gap-6 lg:grid-cols-3 lg:items-start">
 
                     {{-- Menu --}}
@@ -107,7 +131,11 @@
                         @csrf
                         <h3 class="font-semibold text-gray-900">{{ __('Order') }}</h3>
 
-                        {{-- Where does it go? --}}
+                        {{-- Where does it go? The receptionist can only order for guests in a room. --}}
+                        @unless ($canWalkIn)
+                            <input type="hidden" name="target" value="room">
+                        @endunless
+                        @if ($canWalkIn)
                         <div class="grid grid-cols-2 rounded-lg bg-gray-100 p-1 text-sm">
                             <label class="cursor-pointer rounded-md px-3 py-1.5 text-center font-medium transition" :class="target === 'room' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'">
                                 <input type="radio" name="target" value="room" x-model="target" class="sr-only">{{ __('Room bill') }}
@@ -116,6 +144,7 @@
                                 <input type="radio" name="target" value="walk_in" x-model="target" class="sr-only">{{ __('Walk-in bill') }}
                             </label>
                         </div>
+                        @endif
 
                         <div x-show="target === 'room'">
                             <x-input-label for="booking_id" :value="__('Guest')" />
@@ -130,6 +159,7 @@
                             @endif
                         </div>
 
+                        @if ($canWalkIn)
                         <div x-show="target === 'walk_in'" x-cloak class="space-y-3">
                             <div>
                                 <x-input-label for="walk_in_bill_id" :value="__('Bill')" />
@@ -144,6 +174,13 @@
                                 <x-input-label for="customer_name" :value="__('Customer or table (optional)')" />
                                 <input id="customer_name" name="customer_name" type="text" maxlength="100" x-model="customer" :disabled="target !== 'walk_in'" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                             </div>
+                        </div>
+                        @endif
+
+                        {{-- Table: for a guest's order, and for a new walk-in bill. An existing bill keeps its table. --}}
+                        <div x-show="target === 'room' || bill === ''" x-cloak>
+                            <x-input-label for="table_number" :value="$requireTable ? __('Table number') : __('Table number (optional)')" />
+                            <input id="table_number" name="table_number" type="text" maxlength="20" x-model="table" :disabled="! (target === 'room' || bill === '')" :required="requireTable && target === 'room'" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                         </div>
 
                         {{-- Lines --}}
@@ -175,6 +212,7 @@
                             <span x-text="target === 'room' ? '{{ __('Add to room bill') }}' : '{{ __('Add to walk-in bill') }}'"></span>
                         </button>
                         <p x-show="count > 0 && target === 'room' && booking === ''" x-cloak class="text-center text-xs text-amber-700">{{ __('Choose the guest first.') }}</p>
+                        <p x-show="count > 0 && requireTable && target === 'room' && booking !== '' && table.trim() === ''" x-cloak class="text-center text-xs text-amber-700">{{ __('Enter the table number first.') }}</p>
                     </form>
                 </div>
 

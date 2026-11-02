@@ -35,6 +35,12 @@ enum UserRole: string
         return in_array($this, [self::Owner, self::Manager], true);
     }
 
+    /** Roles that may put an order on a walk-in bill. The receptionist only orders for guests in a room. */
+    public function canOrderForWalkIn(): bool
+    {
+        return $this !== self::Receptionist;
+    }
+
     /** Roles that may create and cancel bookings for guests at the desk. */
     public function canManageBookings(): bool
     {

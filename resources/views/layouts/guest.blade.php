@@ -30,5 +30,8 @@
                 {{ $slot }}
             </div>
         </div>
+
+        <x-error-modal />
+        <x-confirm-modal />
     </body>
 </html>

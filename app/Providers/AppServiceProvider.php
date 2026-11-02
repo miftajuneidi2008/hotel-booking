@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Enums\UserRole;
 use App\Http\Middleware\EnsureUserIsActive;
+use App\Http\Middleware\RunOverdueCheck;
 use App\Http\Middleware\SetLocale;
 use App\Models\User;
 use App\Services\SettingsService;
@@ -41,6 +42,9 @@ class AppServiceProvider extends ServiceProvider
         $this->app->make(SettingsService::class)->applyToConfig();
 
         Route::pushMiddlewareToGroup('web', EnsureUserIsActive::class);
+
+        // Tell the front desk about overdue guests even when the scheduler (cron) is not running.
+        Route::pushMiddlewareToGroup('web', RunOverdueCheck::class);
 
         // Show the site in the language the visitor picked (English, Amharic or Afaan Oromoo).
         Route::pushMiddlewareToGroup('web', SetLocale::class);

@@ -104,9 +104,11 @@
             @endif
 
             @if ($open)
-                <a href="{{ route('staff.orders.create', ['bill' => $bill->id]) }}" class="mx-4 flex items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-gray-300 bg-white px-5 py-4 text-sm font-medium text-gray-600 hover:border-indigo-400 hover:text-indigo-700 sm:mx-0">
-                    + {{ __('Add more items') }}
-                </a>
+                @if (auth()->user()->canOrderForWalkIn())
+                    <a href="{{ route('staff.orders.create', ['bill' => $bill->id]) }}" class="mx-4 flex items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-gray-300 bg-white px-5 py-4 text-sm font-medium text-gray-600 hover:border-indigo-400 hover:text-indigo-700 sm:mx-0">
+                        + {{ __('Add more items') }}
+                    </a>
+                @endif
 
                 {{-- Pay --}}
                 @if ($bill->lines->isNotEmpty())

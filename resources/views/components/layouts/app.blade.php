@@ -24,5 +24,8 @@
 
     <x-footer />
 
+    <x-error-modal />
+    <x-confirm-modal />
+
 </body>
 </html>

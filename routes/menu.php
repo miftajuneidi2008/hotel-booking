@@ -17,6 +17,7 @@ Route::middleware(['auth', 'verified'])->prefix('staff')->name('staff.')->group(
     // FR-28: put items on a room bill or a walk-in bill.
     Route::get('orders/create', [OrderController::class, 'create'])->name('orders.create');
     Route::post('orders', [OrderController::class, 'store'])->name('orders.store');
+    Route::post('table-holds/{hold}/release', [OrderController::class, 'releaseTable'])->name('table-holds.release');
 
     Route::get('walk-in-bills', [WalkInBillController::class, 'index'])->name('walk-in-bills.index');
     Route::get('walk-in-bills/{bill}', [WalkInBillController::class, 'show'])->name('walk-in-bills.show');
