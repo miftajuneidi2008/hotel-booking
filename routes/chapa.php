@@ -15,6 +15,6 @@ Route::middleware(['auth', 'throttle:10,1'])
 // Chapa first, and the guest is then sent to their booking page (which does need a login).
 Route::get('/chapa/return/{txRef}', [OnlinePaymentController::class, 'return'])->name('chapa.return');
 
-// Called by Chapa itself. Add /chapa/webhook to the CSRF exceptions (see INSTALL.md).
-Route::get('/chapa/callback', [OnlinePaymentController::class, 'callback'])->name('chapa.callback');
+// Called by Chapa itself. Add /chapa/webhook and /chapa/callback to the CSRF exceptions (see INSTALL.md).
+Route::match(['get', 'post'], '/chapa/callback', [OnlinePaymentController::class, 'callback'])->name('chapa.callback');
 Route::post('/chapa/webhook', [OnlinePaymentController::class, 'webhook'])->name('chapa.webhook');

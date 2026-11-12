@@ -51,6 +51,8 @@
             </div>
         </dl>
 
+        <x-online-payment :booking="$booking" />
+
         @if ($booking->status === \App\Enums\BookingStatus::Cancelled)
             <p class="mt-6 text-sm text-muted">{{ __('Cancelled on :date', ['date' => $booking->cancelled_at->translatedFormat('M j, Y')]) }}: {{ $booking->cancellation_reason }}</p>
         @endif

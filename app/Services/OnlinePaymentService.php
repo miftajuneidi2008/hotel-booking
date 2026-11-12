@@ -85,7 +85,8 @@ class OnlinePaymentService
             'status' => ChapaStatus::Pending,
         ]);
 
-        $answer = $this->gateway->initialize($this->payload($booking, $tx, $by));
+        // One new key per new payment attempt: Chapa v2 requires it, and a retry of this same call is safe.
+        $answer = $this->gateway->initialize($this->payload($booking, $tx, $by), 'hosted-'.$tx->tx_ref);
         $url = $answer['data']['checkout_url'] ?? null;
 
         if (($answer['status'] ?? null) !== 'success' || ! is_string($url) || $url === '') {
@@ -96,7 +97,11 @@ class OnlinePaymentService
             throw new BookingException(__('We could not start the payment. Please try again in a moment, or pay at the hotel.'));
         }
 
-        $tx->update(['checkout_url' => $url]);
+        // The last part of the checkout URL is Chapa's own payment reference.
+        $tx->update([
+            'checkout_url' => $url,
+            'chapa_reference' => $this->text(basename((string) parse_url($url, PHP_URL_PATH)), 100),
+        ]);
 
         return $url;
     }
@@ -140,8 +145,8 @@ class OnlinePaymentService
             $data = (array) ($answer['data'] ?? []);
             $details = [
                 'response' => $answer,
-                'chapa_reference' => $this->text($data['reference'] ?? $data['ref_id'] ?? null, 100),
-                'channel' => $this->text($data['payment_method'] ?? $data['method'] ?? null, 40),
+                'chapa_reference' => $this->text($data['chapa_reference'] ?? null, 100) ?? $fresh->chapa_reference,
+                'channel' => $this->text($data['payment_method'] ?? null, 40),
             ];
 
             if ($outcome === 'pending') {
@@ -214,6 +219,11 @@ class OnlinePaymentService
             return __('This booking is already paid in full.');
         }
 
+        // Chapa does not take a payment below 100 cents (1.00).
+        if ($this->toCents($booking->balanceDue()) < 100) {
+            return __('The balance is too small to pay online. Please pay at the hotel.');
+        }
+
         return null;
     }
 
@@ -223,7 +233,11 @@ class OnlinePaymentService
     }
 
     /**
-     * What Chapa tells us about the payment, judged against what we asked for.
+     * What Chapa's verify call tells us about the payment, judged against what we asked for.
+     *
+     * v2 shape: top-level status is "success" when the CALL worked (not when the guest paid); the payment
+     * itself is data.status in UPPERCASE (SUCCESS, PENDING, FAILED, CANCELLED, INCOMPLETE, BLOCKED).
+     * data.amount is in cents.
      *
      * @param  array<string, mixed>  $answer
      * @return array{0: 'paid'|'failed'|'pending'|'mismatch', 1: ?string}
@@ -231,36 +245,34 @@ class OnlinePaymentService
     private function assess(ChapaTransaction $tx, array $answer): array
     {
         $data = (array) ($answer['data'] ?? []);
-        $remote = strtolower((string) ($data['status'] ?? ''));
+        $remote = strtoupper((string) ($data['status'] ?? ''));
 
-        if (($answer['status'] ?? null) === 'success' && $remote === 'success') {
-            if (isset($data['tx_ref']) && (string) $data['tx_ref'] !== $tx->tx_ref) {
-                return ['mismatch', 'Chapa answered for a different reference.'];
+        if (($answer['status'] ?? null) === 'success' && $remote === 'SUCCESS') {
+            $reference = (string) ($data['merchant_reference'] ?? '');
+
+            if ($reference !== $tx->tx_ref && ! ($tx->chapa_reference !== null && (string) ($data['chapa_reference'] ?? '') === $tx->chapa_reference)) {
+                return ['mismatch', 'Chapa answered for a different payment reference.'];
             }
 
             if (strtoupper((string) ($data['currency'] ?? '')) !== strtoupper($tx->currency)) {
                 return ['mismatch', 'Chapa reports a different currency than the one requested.'];
             }
 
-            // Paying more is fine (the guest may carry Chapa's fee); paying less is not. Only the
+            // The guest may carry Chapa's fee, so paying more is fine; paying less is not. Only the
             // requested amount is ever put on the bill.
-            if ((float) ($data['amount'] ?? 0) + 0.009 < (float) $tx->amount) {
+            if ((int) ($data['amount'] ?? 0) < $this->toCents((float) $tx->amount)) {
                 return ['mismatch', 'Chapa reports a smaller amount than the one requested.'];
-            }
-
-            // A test payment must never count as real money, and the other way round.
-            if (isset($data['mode']) && strtolower((string) $data['mode']) !== ($this->gateway->isTestMode() ? 'test' : 'live')) {
-                return ['mismatch', 'The payment mode (test or live) does not match the configured key.'];
             }
 
             return ['paid', null];
         }
 
-        if (in_array($remote, ['failed', 'cancelled', 'canceled', 'reversed'], true)) {
-            return ['failed', 'Chapa reports the payment as '.$remote.'.'];
+        if (in_array($remote, ['FAILED', 'CANCELLED', 'BLOCKED'], true)) {
+            return ['failed', 'Chapa reports the payment as '.strtolower($remote).'.'];
         }
 
-        // Anything else (still pending, "transaction not found yet", ...): ask again later.
+        // PENDING, INCOMPLETE, AUTH_NEEDED, "payment not found yet", ...: ask again later. The guest can
+        // still finish on the same checkout page, and a fresh attempt is always possible.
         return ['pending', null];
     }
 
@@ -280,37 +292,57 @@ class OnlinePaymentService
     }
 
     /**
+     * The body for POST /v2/payments/hosted.
+     *
      * @return array<string, mixed>
      */
     private function payload(Booking $booking, ChapaTransaction $tx, User $by): array
     {
         $name = preg_split('/\s+/', trim((string) $booking->guest_name), 2) ?: [];
 
-        $payload = [
-            'amount' => number_format((float) $tx->amount, 2, '.', ''),
-            'currency' => $tx->currency,
+        $customer = [
             'email' => $booking->guest_email ?: $by->email,
             'first_name' => $name[0] ?? '',
             'last_name' => $name[1] ?? '',
-            'tx_ref' => $tx->tx_ref,
-            // Chapa calls this (GET) when the payment finishes; the guest's browser comes back to return_url.
-            'callback_url' => route('chapa.callback'),
-            'return_url' => route('chapa.return', $tx->tx_ref),
+        ];
+
+        // Ethiopian mobile numbers (09... or 07...) are sent as 2519xxxxxxxx / 2517xxxxxxxx; anything else is left out.
+        $digits = preg_replace('/\D+/', '', (string) $booking->guest_phone) ?? '';
+        $nine = substr($digits, -9);
+
+        if (strlen($digits) >= 9 && preg_match('/^[79]\d{8}$/', $nine) === 1) {
+            $customer['phone_number'] = '251'.$nine;
+        }
+
+        $payload = [
+            'amount' => $this->toCents((float) $tx->amount),
+            'currency' => $tx->currency,
+            'merchant_reference' => $tx->tx_ref, // max 20 characters, unique
+            'customer' => array_filter($customer, fn ($value): bool => $value !== ''),
+            'meta' => ['booking' => $booking->reference],
             'customization' => [
                 'title' => 'Hotel booking',
                 'description' => 'Booking '.$booking->reference,
             ],
         ];
 
-        // Chapa only accepts 09xxxxxxxx or 07xxxxxxxx, so a number in any other format is left out.
-        $digits = preg_replace('/\D+/', '', (string) $booking->guest_phone) ?? '';
-        $local = '0'.substr($digits, -9);
+        // Chapa accepts HTTPS URLs only, so on plain-http local development they are left out (the guest
+        // then stays on Chapa's page and the webhook / "Check payment status" still settle the payment).
+        $callback = route('chapa.callback');
+        $return = route('chapa.return', $tx->tx_ref);
 
-        if (strlen($digits) >= 9 && preg_match('/^0[79]\d{8}$/', $local) === 1) {
-            $payload['phone_number'] = $local;
+        if (str_starts_with($callback, 'https://')) {
+            $payload['callback_url'] = $callback;
+            $payload['return_url'] = $return;
         }
 
-        return array_filter($payload, fn ($value): bool => $value !== '');
+        return $payload;
+    }
+
+    /** Chapa v2 amounts are integer cents: 100.00 ETB is 10000. */
+    private function toCents(float $amount): int
+    {
+        return (int) round($amount * 100);
     }
 
     private function text(mixed $value, int $max): ?string

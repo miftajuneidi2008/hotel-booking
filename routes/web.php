@@ -105,6 +105,7 @@ Route::middleware(['auth', 'verified', 'can:manage-property'])->prefix('admin')-
 require __DIR__.'/auth.php';
 require __DIR__.'/folio.php';
 require __DIR__.'/payments.php';
+require __DIR__.'/chapa.php';
 require __DIR__.'/housekeeping.php';
 require __DIR__.'/reports.php';
 require __DIR__.'/users.php';

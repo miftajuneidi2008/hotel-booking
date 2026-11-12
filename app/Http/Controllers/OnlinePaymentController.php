@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\ChapaStatus;
 use App\Exceptions\BookingException;
 use App\Models\Booking;
+use App\Services\ChapaGateway;
 use App\Services\OnlinePaymentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -54,10 +55,13 @@ class OnlinePaymentController extends Controller
         };
     }
 
-    /** Chapa's callback_url: a GET with trx_ref, ref_id and status once a payment finishes. */
+    /**
+     * Chapa's callback_url: called when a payment finishes. Whatever it carries is only used to find the
+     * payment; the payment itself is always verified with Chapa.
+     */
     public function callback(Request $request): JsonResponse
     {
-        $txRef = $request->query('trx_ref', $request->query('tx_ref'));
+        $txRef = $request->input('merchant_reference', $request->input('tx_ref', $request->input('trx_ref')));
 
         if (is_string($txRef) && $txRef !== '') {
             $this->online->confirm($txRef);
@@ -67,16 +71,32 @@ class OnlinePaymentController extends Controller
     }
 
     /**
-     * Chapa's webhook: a POST for every payment event. It covers the guest who pays and then closes
-     * the browser before coming back.
+     * Chapa v2 webhook: a POST for every payment event, e.g.
+     * {"webhook_type":"payment","event":"payment.success","status":"success","mode":"test",
+     *  "merchant_reference":"BK-AB12CD-XXXXXXXX","chapa_reference":"CH...","amount":"10000",...}
+     *
+     * It covers the guest who pays and then closes the browser before coming back. The body is never
+     * believed: a payment event only makes us call confirm(), which verifies with Chapa.
      */
-    public function webhook(Request $request): JsonResponse
+    public function webhook(Request $request, ChapaGateway $gateway): JsonResponse
     {
         if (! $this->signatureIsValid($request)) {
             return response()->json(['message' => 'Invalid signature.'], 401);
         }
 
-        $txRef = $request->input('tx_ref', $request->input('trx_ref'));
+        // Other resources (payouts, refunds) are not handled here.
+        if ($request->input('webhook_type') !== 'payment') {
+            return response()->json(['ok' => true]);
+        }
+
+        // A test event must not touch a live setup, and the other way round.
+        $mode = $request->input('mode');
+
+        if (is_string($mode) && $mode !== '' && strtolower($mode) !== ($gateway->isTestMode() ? 'test' : 'live')) {
+            return response()->json(['ok' => true]);
+        }
+
+        $txRef = $request->input('merchant_reference');
 
         if (! is_string($txRef) || $txRef === '') {
             return response()->json(['ok' => true]);
@@ -86,7 +106,7 @@ class OnlinePaymentController extends Controller
 
         // Chapa says "paid" but we could not confirm it yet (Chapa unreachable): answer with an error
         // so that Chapa sends the event again, instead of the payment being forgotten.
-        if ($tx?->status === ChapaStatus::Pending && $request->input('event') === 'charge.success') {
+        if ($tx?->status === ChapaStatus::Pending && $request->input('event') === 'payment.success') {
             return response()->json(['message' => 'Not confirmed yet, please retry.'], 503);
         }
 
@@ -94,38 +114,22 @@ class OnlinePaymentController extends Controller
     }
 
     /**
-     * Chapa signs webhooks with HMAC SHA256 and sends the result in x-chapa-signature (signature of the
-     * body) and chapa-signature. Chapa's guide says "your secret key" for the signing key, so the webhook
-     * secret hash and the API secret key are both accepted.
+     * Chapa signs the exact raw body with HMAC SHA256 (key = the webhook secret from the dashboard) and
+     * sends the lowercase hex digest in the x-chapa-signature header.
      *
      * With no webhook secret configured every call is accepted. That is safe, because confirm() never
      * believes the webhook: it asks Chapa. A forged call can only cause one extra verify request.
      */
     private function signatureIsValid(Request $request): bool
     {
-        if (blank(config('chapa.webhook_secret'))) {
+        $secret = (string) config('chapa.webhook_secret');
+
+        if ($secret === '') {
             return true;
         }
 
-        $body = $request->getContent();
-        $received = array_filter([
-            (string) $request->header('x-chapa-signature', ''),
-            (string) $request->header('chapa-signature', ''),
-        ]);
+        $received = (string) $request->header('x-chapa-signature', '');
 
-        foreach (array_filter([config('chapa.webhook_secret'), config('chapa.secret_key')]) as $secret) {
-            $secret = (string) $secret;
-            $valid = [hash_hmac('sha256', $body, $secret), hash_hmac('sha256', $secret, $secret)];
-
-            foreach ($received as $signature) {
-                foreach ($valid as $candidate) {
-                    if (hash_equals($candidate, $signature)) {
-                        return true;
-                    }
-                }
-            }
-        }
-
-        return false;
+        return $received !== '' && hash_equals(hash_hmac('sha256', $request->getContent(), $secret), strtolower($received));
     }
 }
