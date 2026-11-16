@@ -1,58 +1,111 @@
 <p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+<h1 align="center">Hotel Booking System</h1>
 
-## About Laravel
+<p align="center">A Laravel web application where guests search for available rooms and book their stay online, and administrators manage rooms, availability and reservations.</p>
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## About the Project
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+The Hotel Booking System lets users find a room that fits their dates, make a reservation, and keep track of their bookings, all in one place. An admin side gives hotel staff full control over the rooms they offer and the reservations they receive.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## Features
 
-## Learning Laravel
+### For Guests
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+- Browse rooms and search for availability by date.
+- Make a reservation for an available room.
+- View and manage your own bookings.
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### For Administrators
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+- Add, edit and remove rooms.
+- Manage room availability.
+- View and manage all reservations.
 
-## Agentic Development
+## Tech Stack
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+- **Framework:** Laravel 13
+- **Language:** PHP
+- **Database:** MySQL (any database supported by Laravel can be configured in `.env`)
+- **Package managers:** Composer and npm
+
+## Getting Started
+
+### Prerequisites
+
+- PHP (version required by Laravel 13)
+- Composer
+- Node.js and npm
+- MySQL or another supported database
+
+### Installation
+
+1. Clone the repository and move into the project folder:
+
+   ```bash
+   git clone <your-repository-url>
+   cd <project-folder>
+   ```
+
+2. Install dependencies:
+
+   ```bash
+   composer install
+   npm install
+   ```
+
+3. Create your environment file and generate the application key:
+
+   ```bash
+   cp .env.example .env
+   php artisan key:generate
+   ```
+
+4. Create a database, then set your credentials in `.env`:
+
+   ```env
+   DB_CONNECTION=mysql
+   DB_HOST=127.0.0.1
+   DB_PORT=3306
+   DB_DATABASE=hotel_booking
+   DB_USERNAME=your_username
+   DB_PASSWORD=your_password
+   ```
+
+5. Run the migrations (add `--seed` if the project includes seeders):
+
+   ```bash
+   php artisan migrate
+   ```
+
+6. Build the frontend assets and start the app:
+
+   ```bash
+   npm run build
+   php artisan serve
+   ```
+
+   The application will be available at `http://localhost:8000`.
+
+   For development with hot reloading, run `npm run dev` in a second terminal instead of `npm run build`.
+
+## How Booking Works
+
+1. A guest chooses their dates and searches for available rooms.
+2. The guest selects a room and confirms the reservation.
+3. The booking appears in the guest's bookings, and in the admin reservations list.
+4. Administrators can review reservations and keep room availability up to date.
+
+## Running Tests
 
 ```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+php artisan test
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+## Built With Laravel
 
-## Contributing
-
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
-
-## Code of Conduct
-
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+This project is built on [Laravel](https://laravel.com), a web application framework with expressive, elegant syntax. See the [Laravel documentation](https://laravel.com/docs) to learn more about routing, Eloquent ORM, migrations and other framework features used here.
 
 ## License
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT). Add your own license here if this project uses a different one.
